@@ -1,6 +1,7 @@
 
 using asp_web_api.Models;
 using asp_web_api.Parameters;
+using asp_web_api.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace asp_web_api.Controllers
@@ -9,10 +10,16 @@ namespace asp_web_api.Controllers
     [Route("[controller]")]
     public class CardController : ControllerBase
     {
+        private readonly CardRepository _cardRepository;
+
+
         /// <summary>
-        /// 測試用的資料集合
+        /// 建構式
         /// </summary>
-        private static List<Card> _cards = new List<Card>();
+        public CardController(CardRepository cardRepository)
+        {
+            this._cardRepository =cardRepository;
+        }
 
         /// <summary>
         /// 查詢卡片列表
@@ -21,27 +28,46 @@ namespace asp_web_api.Controllers
         [HttpGet]
         public List<Card> GetList()
         {
-            return _cards;
+            return this._cardRepository.GetAll().Select(entity=>new Card { 
+                Id = entity.Id,
+                Name = entity.Name,
+                Description = entity.Description,
+            }).ToList();
         }
+
         /// <summary>
-        /// 更新卡片
+        /// 查詢卡片
         /// </summary>
         /// <param name="id">卡片編號</param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("{id}")]
+        public Card Get([FromRoute] int id)
+        {
+            var result = this._cardRepository.GetById(id);
+            if (result is null)
+            {
+                Response.StatusCode = 404;
+                return null;
+            }
+            return new Card { 
+            Id=result.Id,Name=result.Name,Description=result.Description};
+        }
+
+        /// <summary>
+        /// 新增卡片
+        /// </summary>
         /// <param name="parameter">卡片參數</param>
         /// <returns></returns>
         [HttpPost]
-        public IActionResult insert([FromBody] CardParameter cardParameter)
+        public IActionResult Insert([FromBody] CardParameter parameter)
         {
-            _cards.Add(new Card()
+            var result = this._cardRepository.Create(parameter);
+            if (result > 0)
             {
-                Id = _cards.Any()
-          ? _cards.Max(card => card.Id) + 1
-          : 0, // 臨時防呆，如果沒東西就從 0 開始
-                Name = cardParameter.Name,
-                Description = cardParameter.Description
-            });
-            return Ok();
-
+                return Ok();
+            }
+            return StatusCode(500);
         }
 
         /// <summary>
@@ -56,16 +82,18 @@ namespace asp_web_api.Controllers
             [FromRoute] int id,
             [FromBody] CardParameter parameter)
         {
-            var targetCard = _cards.FirstOrDefault(card => card.Id == id);
+            var targetCard = this._cardRepository.GetById(id);
             if (targetCard is null)
             {
                 return NotFound();
             }
 
-            targetCard.Name = parameter.Name;
-            targetCard.Description = parameter.Description;
-
-            return Ok();
+            var isUpdateSuccess = this._cardRepository.UpdateById(id, parameter);
+            if (isUpdateSuccess)
+            {
+                return Ok();
+            }
+            return StatusCode(500);
         }
 
 
@@ -78,7 +106,7 @@ namespace asp_web_api.Controllers
         [Route("{id}")]
         public IActionResult Delete([FromRoute] int id)
         {
-            _cards.RemoveAll(card => card.Id == id);
+            this._cardRepository.DeleteById(id);
             return Ok();
         }
     }
