@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace asp_web_api.Parameters
+namespace asp_web_api.Models.Entity
 {
-    /// <summary>
-    /// 卡片參數
-    /// </summary>
-    public class CardParameter
+    public class CardEntity
     {
+        /// <summary>
+        /// 卡片編號
+        /// </summary>
+        public int Id { get; set; }
+
         /// <summary>
         /// 卡片名稱
         /// </summary>
